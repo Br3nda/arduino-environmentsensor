@@ -13,7 +13,7 @@ dht DHT;
 #define TRANSMIT_EN_PIN 3
 #define DHT11_PIN 11
 
-const int plant_number = 1;
+const int sensor_number = 1;
 
 void setup() {
 
@@ -89,7 +89,7 @@ byte count = 1;
 void sendDataViaRF(String readingType, int reading) {
   debugMessage("Sending RF message, %s = ", reading);
 
-  char msg[4] = {'p', plant_number, ':', reading};
+  char msg[4] = {'p', sensor_number, ':', reading};
   msg[6] = count;
   digitalWrite(LED_PIN, HIGH); // Flash a light to show transmitting
   vw_send((uint8_t *)msg, 7);
