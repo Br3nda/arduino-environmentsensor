@@ -1,5 +1,6 @@
 #include <VirtualWire.h>
 #include <dht.h>
+#include <stdio.h>
 
 dht DHT;
 
@@ -9,11 +10,10 @@ dht DHT;
 #define TIME_BETWEEN_READINGS 1000
 #define LED_PIN 11
 #define TRANSMIT_PIN 12
-#define RECIEVE_PIN 2
+//#define RECIEVE_PIN 2
 #define TRANSMIT_EN_PIN 3
 #define DHT11_PIN 11
 
-const int sensor_number = 1;
 
 void setup() {
 
@@ -27,9 +27,9 @@ void setup() {
 
   // Initialise the IO and ISR
   vw_set_tx_pin(TRANSMIT_PIN);
-  vw_set_rx_pin(RECIEVE_PIN);
+//  vw_set_rx_pin(RECIEVE_PIN);
   vw_set_ptt_pin(TRANSMIT_EN_PIN);
-  vw_set_ptt_inverted(true); // Required for DR3100
+//  vw_set_ptt_inverted(true); // Required for DR3100
   vw_setup(2000);       // Bits per sec
   pinMode(LED_PIN, OUTPUT);
 }
@@ -66,37 +66,35 @@ void readPlantMoisture() {
   // invert the reading
   int val2 = 1023 - analogRead(SENSOR_PIN);
 
-  //average the two values
-  debugMessage("Reading one = ", val1);
-  debugMessage("Reading two = ", val2);
-
   int avg = (val1 + val2) / 2;
-  debugMessage("Average reading = ", avg);
 
- 
-  sendDataViaRF("moisture", avg);
+  sendDataViaRF("moisture", String(avg));
 }
 
-void debugMessage(String message, int value) {
-  message += value;
-  Serial.println(message);
-}
+/**
+* Send data via the 433MHz transmitter
+*/
+void sendDataViaRF(String reading_type, String reading_value) {
+  String sensor_name = "lounge";
 
-
-
-byte count = 1;
-
-void sendDataViaRF(String readingType, int reading) {
-  debugMessage("Sending RF message, %s = ", reading);
-
-  char msg[4] = {'p', sensor_number, ':', reading};
-  msg[6] = count;
   digitalWrite(LED_PIN, HIGH); // Flash a light to show transmitting
-  vw_send((uint8_t *)msg, 7);
-  vw_wait_tx(); // Wait until the whole message is gone
-  digitalWrite(LED_PIN, LOW);
+  
+  //Assemble the message
+  String message = sensor_name + ":" + reading_type + ":" + reading_value;
+  
+//  //turn our string into an array of chars for sending.
+  char msg[message.length()];
+  message.toCharArray(msg, message.length());
+  Serial.println(msg);
+  
+  vw_send((uint8_t *)msg, strlen(msg));
+  // Wait until the whole message is gone
+  vw_wait_tx(); 
+
   delay(1000);
-  count = count + 1;
+
+  digitalWrite(LED_PIN, LOW);
+  
 }
 
 void readTempHumidity() {
@@ -116,20 +114,16 @@ void readTempHumidity() {
       Serial.println("Unknown error,\t");
       break;
   }
-  // DISPLAY DATA
-  Serial.print("Humidity: ");
-  Serial.println(DHT.humidity, 1);
-//  sendDataViaRF("humidity", DHT.humidity);
   
-  Serial.print("Temp: ");
-  Serial.println(DHT.temperature, 1);
-//  sendDataViaRF("temperature", DHT.temperature);
+  sendDataViaRF("humidity", String(DHT.humidity));
+  sendDataViaRF("temperature", String(DHT.temperature));
+  
+  delay(1000); // ensure we don't read too often
 }
 
 void loop() {
-//  readPlantMoisture();
+  readPlantMoisture();
   readTempHumidity();
-  delay(TIME_BETWEEN_READINGS);
 }
 
 
