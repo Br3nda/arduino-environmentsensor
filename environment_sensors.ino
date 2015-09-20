@@ -58,8 +58,6 @@ void readPlantMoisture() {
   Alternating polatity makes the metal in the pot last longer.
   */
   
-  Serial.println("Reading moisture");
-  
   //first read
   setSensorPolarity(true);
   delay(TIME_BETWEEN_READINGS);
@@ -75,7 +73,6 @@ void readPlantMoisture() {
 
   float avg = (val1 + val2) / 2;
 
-  Serial.println("done");
   sendDataViaRF("moisture", avg);
 }
 
