@@ -1,6 +1,7 @@
 #include <VirtualWire.h>
 #include <dht.h>
 #include <stdio.h>
+#include <ArduinoJson.h>
 
 dht DHT;
 
@@ -14,6 +15,8 @@ dht DHT;
 #define TRANSMIT_EN_PIN 3
 #define DHT11_PIN 11
 
+
+char SENSOR_NUMBER = 'A';
 
 void setup() {
 
@@ -32,6 +35,7 @@ void setup() {
 //  vw_set_ptt_inverted(true); // Required for DR3100
   vw_setup(2000);       // Bits per sec
   pinMode(LED_PIN, OUTPUT);
+  
 }
 
 
@@ -46,13 +50,16 @@ void setSensorPolarity(boolean flip) {
   }
 }
 
+
 void readPlantMoisture() {
   /**
   Read moisture (voltage change) across 2 pins
   Then read in reverse.
   Alternating polatity makes the metal in the pot last longer.
   */
-
+  
+  Serial.println("Reading moisture");
+  
   //first read
   setSensorPolarity(true);
   delay(TIME_BETWEEN_READINGS);
@@ -66,25 +73,27 @@ void readPlantMoisture() {
   // invert the reading
   int val2 = 1023 - analogRead(SENSOR_PIN);
 
-  int avg = (val1 + val2) / 2;
+  float avg = (val1 + val2) / 2;
 
-  sendDataViaRF("moisture", String(avg));
+  Serial.println("done");
+  sendDataViaRF("moisture", avg);
 }
 
 /**
 * Send data via the 433MHz transmitter
 */
-void sendDataViaRF(String reading_type, String reading_value) {
-  String sensor_name = "lounge";
+void sendDataViaRF(String reading_type, float reading_value) {
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  root["sensor"] = "coffee";
+  root["type"] = reading_type;
+  root["value"] = reading_value;
 
+  char msg[256];
+  root.printTo(msg, sizeof(msg));
+  
   digitalWrite(LED_PIN, HIGH); // Flash a light to show transmitting
   
-  //Assemble the message
-  String message = sensor_name + ":" + reading_type + ":" + reading_value;
-  
-//  //turn our string into an array of chars for sending.
-  char msg[message.length()];
-  message.toCharArray(msg, message.length());
   Serial.println(msg);
   
   vw_send((uint8_t *)msg, strlen(msg));
@@ -94,7 +103,7 @@ void sendDataViaRF(String reading_type, String reading_value) {
   delay(1000);
 
   digitalWrite(LED_PIN, LOW);
-  
+
 }
 
 void readTempHumidity() {
@@ -115,9 +124,9 @@ void readTempHumidity() {
       break;
   }
   
-  sendDataViaRF("humidity", String(DHT.humidity));
-  sendDataViaRF("temperature", String(DHT.temperature));
-  
+  sendDataViaRF("humidity", DHT.humidity);
+  sendDataViaRF("temperature", DHT.temperature);
+ 
   delay(1000); // ensure we don't read too often
 }
 
